@@ -77,15 +77,6 @@ pipeline {
     string(name: 'dtest_branch', defaultValue: params.dtest_branch ?: 'trunk', description: 'DTest Branch')
   }
 stages {
-        stage('Checkout Repository') {
-            agent { label 'infra-ubuntu2204' } // checkout also runs on dedicated node
-            steps {
-                dir('repo') {
-                    git branch: params.branch, url: params.repository
-                }
-            }
-        }
-
         stage('Orchestration') {
             steps {
                 script {
