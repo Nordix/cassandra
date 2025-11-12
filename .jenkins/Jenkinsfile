@@ -76,39 +76,40 @@ pipeline {
     string(name: 'dtest_repository', defaultValue: params.dtest_repository ?: 'https://github.com/apache/cassandra-dtest', description: 'Cassandra DTest Repository')
     string(name: 'dtest_branch', defaultValue: params.dtest_branch ?: 'trunk', description: 'DTest Branch')
   }
-  stages {
-    stage('jar') {
-      // the jar stage executes only the 'jar' build step, via the build(…) function
-      // the results of these (per jdk, per arch) are then stashed and used for every other build and test step
-      steps {
-        script {
-          parallel(getJarTasks())
+   stages {
+
+    stage('Orchestration') {
+      agent { label 'infra-ubuntu2204' }
+      stages {
+        stage('jar') {
+          steps {
+            script {
+              parallel(getJarTasks())
+            }
+          }
         }
-      }
-    }
-    stage('Tests') {
-      // the Tests stage executes all other build and task steps.
-      // build steps are sent to the build(…) function, test steps sent to the test(…) function
-      // these steps are parameterised and split by the tasks() function
-      when {
-        expression { hasNonJarTasks() }
-      }
-      steps {
-        script {
-          parallel(tasks()['tests'])
+        stage('Tests') {
+          when {
+            expression { hasNonJarTasks() }
+          }
+          steps {
+            script {
+              parallel(tasks()['tests'])
+            }
+          }
         }
-      }
-    }
-    stage('Summary') {
-      // generate the ci_summary.html and results_details.tar.xz artefacts
-      steps {
-        generateTestReports()
+
+        stage('Summary') {
+          steps {
+            generateTestReports()
+          }
+        }
       }
     }
   }
   post {
     failure {
-      echo "ERROR pipeline failed – not all tests were run"
+      echo "ERROR pipeline failed – not all tests were run"
     }
     always {
       sendNotifications()
