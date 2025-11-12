@@ -76,45 +76,55 @@ pipeline {
     string(name: 'dtest_repository', defaultValue: params.dtest_repository ?: 'https://github.com/apache/cassandra-dtest', description: 'Cassandra DTest Repository')
     string(name: 'dtest_branch', defaultValue: params.dtest_branch ?: 'trunk', description: 'DTest Branch')
   }
-   stages {
-
-    stage('Orchestration') {
-      agent { label 'infra-ubuntu2204' }
-      stages {
-        stage('jar') {
-          steps {
-            script {
-              parallel(getJarTasks())
+stages {
+        stage('Checkout Repository') {
+            agent { label 'infra-ubuntu2204' } // checkout also runs on dedicated node
+            steps {
+                dir('repo') {
+                    git branch: params.branch, url: params.repository
+                }
             }
-          }
-        }
-        stage('Tests') {
-          when {
-            expression { hasNonJarTasks() }
-          }
-          steps {
-            script {
-              parallel(tasks()['tests'])
-            }
-          }
         }
 
-        stage('Summary') {
-          steps {
-            generateTestReports()
-          }
+        stage('Orchestration') {
+            steps {
+                script {
+                    // Run all orchestration stages on a dedicated orchestrator node
+                    node('infra-ubuntu2204') {
+
+                        stage('Prepare Environment') {
+                            echo "Running orchestration on infra-ubuntu2204"
+                            sh 'docker system prune -af'
+                            sh "docker pull apache.jfrog.io/cassan-docker/alpine:3.19.1"
+                        }
+
+                        stage('jar') {
+                            parallel(getJarTasks())
+                        }
+
+                        stage('Tests') {
+                            if (hasNonJarTasks()) {
+                                parallel(tasks()['tests'])
+                            }
+                        }
+
+                        stage('Summary') {
+                            generateTestReports()
+                        }
+                    } // end node
+                } // end script
+            } // end steps
+        } // end Orchestration
+    } // end stages
+
+    post {
+        failure {
+            echo "ERROR pipeline failed – not all tests were run"
         }
-      }
+        always {
+            sendNotifications()
+        }
     }
-  }
-  post {
-    failure {
-      echo "ERROR pipeline failed – not all tests were run"
-    }
-    always {
-      sendNotifications()
-    }
-  }
 }
 
 ///////////////////////////
