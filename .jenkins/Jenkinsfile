@@ -76,7 +76,7 @@ pipeline {
     string(name: 'dtest_repository', defaultValue: params.dtest_repository ?: 'https://github.com/apache/cassandra-dtest', description: 'Cassandra DTest Repository')
     string(name: 'dtest_branch', defaultValue: params.dtest_branch ?: 'trunk', description: 'DTest Branch')
   }
-stages {
+  stages {
         stage('Orchestration') {
             steps {
                 script {
@@ -108,7 +108,7 @@ stages {
         } // end Orchestration
     } // end stages
 
-    post {
+  post {
         failure {
             echo "ERROR pipeline failed – not all tests were run"
         }
