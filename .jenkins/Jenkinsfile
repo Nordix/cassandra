@@ -58,7 +58,7 @@
 
 
 pipeline {
-  agent { label 'cassandra-small' }
+  agent none
   options {
     // must have: avoids agents waste in idle time on controller bottleneck
     durabilityHint('PERFORMANCE_OPTIMIZED')
